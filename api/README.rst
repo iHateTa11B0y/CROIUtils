@@ -10,4 +10,4 @@ Class:
 - ROIPool
 
 Quick Links:
-- `maskrcnn-benckmark <https://github.com/facebookresearch/maskrcnn-benchmark/tree/master/maskrcnn_benchmark/csrc>'_
+- `maskrcnn-benckmark` <https://github.com/facebookresearch/maskrcnn-benchmark/tree/master/maskrcnn_benchmark/csrc>'_
