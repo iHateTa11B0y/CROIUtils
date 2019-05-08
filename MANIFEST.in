@@ -1,0 +1,3 @@
+include csrc/*.h
+include csrc/cpu/*.h
+include csrc/cuda/*.h
