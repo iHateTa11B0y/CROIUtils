@@ -11,6 +11,12 @@ Class:
 - ROIAlign
 - ROIPool
 
+Installation
+------------
+.. code-block:: console
+
+   $ pip install maskrcnn_utils
+
 Quick Links
 -----------
 - `Github HomePage <https://github.com/iHateTa11B0y/CROIUtils>`_
