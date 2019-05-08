@@ -6,7 +6,7 @@ setup(
         description='this is a tool package for maskrcnn',
         author='Kuuuurt',
         author_email='findme@somewhere.com',
-        url='haishentec.com',
+        url='https://github.com/iHateTa11B0y/CROIUtils',
         packages=['maskrcnn_utils'],
         package_data={'maskrcnn_utils': ['_C.so'],},
 )
