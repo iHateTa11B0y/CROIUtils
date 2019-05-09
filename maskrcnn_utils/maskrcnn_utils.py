@@ -126,20 +126,3 @@ class ROIPool(nn.Module):
         tmpstr += ", spatial_scale=" + str(self.spatial_scale)
         tmpstr += ")"
         return tmpstr
-
-'''
-a = torch.tensor([[0,0,2,2],[1,1,3,3]]).float()
-b = torch.tensor([0.9, 0.2])
-thr = 0.1
-print(nms(a,b,thr))
-
-output_size = (7, 7, 1)
-spatial_scale = 0.25
-sampling_ratio = 2
-RA = ROIAlign(output_size, spatial_scale, sampling_ratio).cuda()
-inputx = torch.randn((1,1,14,14)).cuda()
-roi = torch.ones(1).float().cuda()
-output = RA(inputx, roi)
-print(inputx)
-print(output)
-'''
