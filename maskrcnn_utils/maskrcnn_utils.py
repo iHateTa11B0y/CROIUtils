@@ -1,17 +1,22 @@
 import torch
-import _C
+from . import _C
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
-def nms(dets, scores, threshold):
+def nms(dets, scores, threshold, centers=None):
     '''
     dets: tensor
     scores: tensor
     threshold: float
+    centers: tensor, coresponding mask center
     '''
-    return _C.nms(dets, scores, threshold)
+    if centers is not None:
+        print("center nms ing...")
+        return _C.center_nms(dets, scores, threshold, centers)
+    else:
+        return _C.nms(dets, scores, threshold)
 
 # ROIAlign
 class _ROIAlign(Function):

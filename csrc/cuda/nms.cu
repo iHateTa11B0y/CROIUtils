@@ -1,6 +1,7 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+//#include <ATen/native/cuda/DeviceSqrt.cuh>
 
 #include <THC/THC.h>
 #include <THC/THCDeviceUtils.cuh>
@@ -66,6 +67,65 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
   }
 }
 
+__global__ void center_nms_kernel(const int n_boxes, const float nms_overlap_thresh,
+                           const float *dev_boxes, unsigned long long *dev_mask) {
+  const int row_start = blockIdx.y;
+  const int col_start = blockIdx.x;
+
+  // if (row_start > col_start) return;
+
+  const int row_size =
+        min(n_boxes - row_start * threadsPerBlock, threadsPerBlock);
+  const int col_size =
+        min(n_boxes - col_start * threadsPerBlock, threadsPerBlock);
+
+  __shared__ float block_boxes[threadsPerBlock * 7];
+  if (threadIdx.x < col_size) {
+    block_boxes[threadIdx.x * 7 + 0] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 0];
+    block_boxes[threadIdx.x * 7 + 1] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 1];
+    block_boxes[threadIdx.x * 7 + 2] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 2];
+    block_boxes[threadIdx.x * 7 + 3] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 3];
+    block_boxes[threadIdx.x * 7 + 4] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 4];
+    block_boxes[threadIdx.x * 7 + 5] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 5];
+    block_boxes[threadIdx.x * 7 + 6] =
+        dev_boxes[(threadsPerBlock * col_start + threadIdx.x) * 7 + 6];
+  }
+  __syncthreads();
+
+  if (threadIdx.x < row_size) {
+    const int cur_box_idx = threadsPerBlock * row_start + threadIdx.x;
+    const float *cur_box = dev_boxes + cur_box_idx * 7;
+    int i = 0;
+    unsigned long long t = 0;
+    int start = 0;
+    if (row_start == col_start) {
+      start = threadIdx.x + 1;
+    }
+    for (i = start; i < col_size; i++) {
+      float ibx = (cur_box[0] + cur_box[2]) / 2;
+      float iby = (cur_box[1] + cur_box[3]) / 2;
+      float jbx = ((block_boxes + i * 7)[0] + (block_boxes + i * 7)[2]) / 2;
+      float jby = ((block_boxes + i * 7)[1] + (block_boxes + i * 7)[3]) / 2;
+      float icx = cur_box[5];
+      float icy = cur_box[6];
+      float jcx = (block_boxes + i * 7)[5];
+      float jcy = (block_boxes + i * 7)[6];
+      float weight = sqrtf((ibx - jbx) * (ibx - jbx) + (iby - jby) * (iby - jby)) / sqrtf((icx - jcx) * (icx - jcx) + (icy - jcy) * (icy - jcy));
+      if (devIoU(cur_box, block_boxes + i * 7) * weight > nms_overlap_thresh) {
+        t |= 1ULL << i;
+      }
+    }
+    const int col_blocks = THCCeilDiv(n_boxes, threadsPerBlock);
+    dev_mask[cur_box_idx * col_blocks + col_start] = t;
+  }
+}
+
 // boxes is a N x 5 tensor
 at::Tensor nms_cuda(const at::Tensor boxes, float nms_overlap_thresh) {
   using scalar_t = float;
@@ -75,6 +135,7 @@ at::Tensor nms_cuda(const at::Tensor boxes, float nms_overlap_thresh) {
   auto boxes_sorted = boxes.index_select(0, order_t);
 
   int boxes_num = boxes.size(0);
+  int input_cols = boxes.size(1);
 
   const int col_blocks = THCCeilDiv(boxes_num, threadsPerBlock);
 
@@ -91,10 +152,18 @@ at::Tensor nms_cuda(const at::Tensor boxes, float nms_overlap_thresh) {
   dim3 blocks(THCCeilDiv(boxes_num, threadsPerBlock),
               THCCeilDiv(boxes_num, threadsPerBlock));
   dim3 threads(threadsPerBlock);
-  nms_kernel<<<blocks, threads>>>(boxes_num,
+  if (input_cols == 7) {
+    center_nms_kernel<<<blocks, threads>>>(boxes_num,
                                   nms_overlap_thresh,
                                   boxes_dev,
                                   mask_dev);
+  } else {
+    nms_kernel<<<blocks, threads>>>(boxes_num,
+                                  nms_overlap_thresh,
+                                  boxes_dev,
+                                  mask_dev);
+
+  }
 
   std::vector<unsigned long long> mask_host(boxes_num * col_blocks);
   THCudaCheck(cudaMemcpy(&mask_host[0],

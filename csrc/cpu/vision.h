@@ -10,7 +10,11 @@ at::Tensor ROIAlign_forward_cpu(const at::Tensor& input,
                                 const int pooled_width,
                                 const int sampling_ratio);
 
-
 at::Tensor nms_cpu(const at::Tensor& dets,
                    const at::Tensor& scores,
                    const float threshold);
+
+at::Tensor nms_cpu(const at::Tensor& dets,
+                   const at::Tensor& scores,
+                   const float threshold,
+                   const at::Tensor& centers);

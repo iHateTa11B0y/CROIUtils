@@ -21,7 +21,7 @@ ext_modules=[
 
 setup(
         name='maskrcnn_utils',
-        version='0.1.5',
+        version='0.1.6',
         description='this is a tool package for maskrcnn',
         author='Kuuuurt',
         author_email='niu1187203155@gmail.com',
