@@ -1,1 +1,1 @@
-from maskrcnn_utils import nms, ROIAlign, ROIPool
+from .maskrcnn_utils import nms, ROIAlign, ROIPool
