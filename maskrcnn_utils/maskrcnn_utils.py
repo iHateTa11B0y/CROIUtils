@@ -13,7 +13,6 @@ def nms(dets, scores, threshold, centers=None):
     centers: tensor, coresponding mask center
     '''
     if centers is not None:
-        print("center nms ing...")
         return _C.center_nms(dets, scores, threshold, centers)
     else:
         return _C.nms(dets, scores, threshold)
